@@ -110,19 +110,35 @@ func (q *Queries) ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, e
 
 const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos 
-SET title = $2, content = $3
-WHERE id = $1
+SET 
+    title = CASE
+        WHEN $1::boolean = TRUE THEN $2
+        ELSE title
+    END,
+    content = CASE
+        WHEN $3::boolean = TRUE THEN $4
+        ELSE content
+    END
+WHERE id = $5
 RETURNING id, owner, title, content, created_at
 `
 
 type UpdateTodoParams struct {
-	ID      int64  `json:"id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	SetTitle   bool   `json:"setTitle"`
+	Title      string `json:"title"`
+	SetContent bool   `json:"setContent"`
+	Content    string `json:"content"`
+	ID         int64  `json:"id"`
 }
 
 func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, updateTodo, arg.ID, arg.Title, arg.Content)
+	row := q.db.QueryRowContext(ctx, updateTodo,
+		arg.SetTitle,
+		arg.Title,
+		arg.SetContent,
+		arg.Content,
+		arg.ID,
+	)
 	var i Todo
 	err := row.Scan(
 		&i.ID,

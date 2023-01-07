@@ -20,8 +20,16 @@ OFFSET $2;
 
 -- name: UpdateTodo :one
 UPDATE todos 
-SET title = $2, content = $3
-WHERE id = $1
+SET 
+    title = CASE
+        WHEN @set_title::boolean = TRUE THEN @title
+        ELSE title
+    END,
+    content = CASE
+        WHEN @set_content::boolean = TRUE THEN @content
+        ELSE content
+    END
+WHERE id = @id
 RETURNING *;
 
 -- name: DeleteTodo :exec
