@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createTodo = `-- name: CreateTodo :one
@@ -111,34 +112,20 @@ func (q *Queries) ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, e
 const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos 
 SET 
-    title = CASE
-        WHEN $1::boolean = TRUE THEN $2
-        ELSE title
-    END,
-    content = CASE
-        WHEN $3::boolean = TRUE THEN $4
-        ELSE content
-    END
-WHERE id = $5
+    title = COALESCE($1, title),
+    content = COALESCE($2, content)
+WHERE id = $3
 RETURNING id, owner, title, content, created_at
 `
 
 type UpdateTodoParams struct {
-	SetTitle   bool   `json:"setTitle"`
-	Title      string `json:"title"`
-	SetContent bool   `json:"setContent"`
-	Content    string `json:"content"`
-	ID         int64  `json:"id"`
+	Title   sql.NullString `json:"title"`
+	Content sql.NullString `json:"content"`
+	ID      int64          `json:"id"`
 }
 
 func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, updateTodo,
-		arg.SetTitle,
-		arg.Title,
-		arg.SetContent,
-		arg.Content,
-		arg.ID,
-	)
+	row := q.db.QueryRowContext(ctx, updateTodo, arg.Title, arg.Content, arg.ID)
 	var i Todo
 	err := row.Scan(
 		&i.ID,

@@ -109,9 +109,9 @@ func (server *Server) deleteTodo(ctx *gin.Context) {
 }
 
 type updateTodoRequest struct {
-	ID      int64  `json:"id" binding:"required"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	ID      int64   `json:"id" binding:"required"`
+	Title   *string `json:"title"`
+	Content *string `json:"content"`
 }
 
 func (server *Server) updateTodo(ctx *gin.Context) {
@@ -122,9 +122,15 @@ func (server *Server) updateTodo(ctx *gin.Context) {
 	}
 
 	arg := db.UpdateTodoParams{
-		ID:      req.ID,
-		Title:   req.Title,
-		Content: req.Content,
+		ID: req.ID,
+		Title: sql.NullString{
+			String: req.getTitle(),
+			Valid:  req.getTitle() != "",
+		},
+		Content: sql.NullString{
+			String: req.getContent(),
+			Valid:  req.getContent() != "",
+		},
 	}
 	todo, err := server.store.UpdateTodo(ctx, arg)
 	if err != nil {
@@ -133,4 +139,17 @@ func (server *Server) updateTodo(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, successResponse("updated", todo))
+}
+
+func (x *updateTodoRequest) getTitle() string {
+	if x.Title != nil {
+		return *x.Title
+	}
+	return ""
+}
+func (x *updateTodoRequest) getContent() string {
+	if x.Content != nil {
+		return *x.Content
+	}
+	return ""
 }

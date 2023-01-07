@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -74,9 +75,11 @@ func TestUpdateTodo(t *testing.T) {
 	todo1 := createRandomTodo(t)
 
 	arg := UpdateTodoParams{
-		ID:      todo1.ID,
-		Title:   utils.RandomTitle(),
-		Content: utils.RandomContent(),
+		ID: todo1.ID,
+		Title: sql.NullString{
+			String: utils.RandomTitle(),
+			Valid:  true,
+		},
 	}
 
 	todo2, err := testQueries.UpdateTodo(context.Background(), arg)
@@ -84,11 +87,9 @@ func TestUpdateTodo(t *testing.T) {
 	require.NotEmpty(t, todo2)
 
 	require.Equal(t, todo2.ID, arg.ID)
-	require.Equal(t, todo2.Title, arg.Title)
-	require.Equal(t, todo2.Content, arg.Content)
+	require.Equal(t, todo2.Title, arg.Title.String)
 
 	require.NotEqual(t, todo1.Title, todo2.Title)
-	require.NotEqual(t, todo1.Content, todo2.Content)
 }
 
 func TestDeleteTodo(t *testing.T) {

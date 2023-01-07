@@ -21,15 +21,9 @@ OFFSET $2;
 -- name: UpdateTodo :one
 UPDATE todos 
 SET 
-    title = CASE
-        WHEN @set_title::boolean = TRUE THEN @title
-        ELSE title
-    END,
-    content = CASE
-        WHEN @set_content::boolean = TRUE THEN @content
-        ELSE content
-    END
-WHERE id = @id
+    title = COALESCE(sqlc.narg(title), title),
+    content = COALESCE(sqlc.narg(content), content)
+WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: DeleteTodo :exec
