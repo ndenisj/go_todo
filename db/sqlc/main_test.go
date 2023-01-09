@@ -7,18 +7,20 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
-)
-
-const (
-	dbDriver = "postgres"
-	dbSource = "postgres://root:secret@localhost:5432/todo?sslmode=disable"
+	"github.com/ndenisj/go_todo/utils"
 )
 
 var testQueries *Queries
 
 // TestMain: main entrypoint of the test
 func TestMain(m *testing.M) {
-	conn, err := sql.Open(dbDriver, dbSource)
+	//load config
+	config, err := utils.LoadConfig("../..")
+	if err != nil {
+		log.Fatal("Can not load config", err)
+	}
+
+	conn, err := sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("Can not connect to DB")
 	}

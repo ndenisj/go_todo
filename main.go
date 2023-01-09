@@ -6,18 +6,19 @@ import (
 
 	"github.com/ndenisj/go_todo/api"
 	db "github.com/ndenisj/go_todo/db/sqlc"
+	"github.com/ndenisj/go_todo/utils"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbDriver      = "postgres"
-	dbSource      = "postgres://root:secret@localhost:5432/todo?sslmode=disable"
-	serverAddress = "0.0.0.0:8080"
-)
-
 func main() {
-	conn, err := sql.Open(dbDriver, dbSource)
+	//load config
+	config, err := utils.LoadConfig(".")
+	if err != nil {
+		log.Fatal("Can not load config", err)
+	}
+
+	conn, err := sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("Can not connect to DB", err)
 	}
@@ -25,7 +26,7 @@ func main() {
 	store := db.NewStore(conn)
 	server := api.NewServer(store)
 
-	err = server.Start(serverAddress)
+	err = server.Start(config.ServerAddress)
 	if err != nil {
 		log.Fatal("Can not start server", err)
 	}
