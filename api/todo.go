@@ -59,7 +59,8 @@ func (server *Server) getTodo(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, successResponse("successful", todo))
+	ctx.JSON(http.StatusOK, todo)
+	// ctx.JSON(http.StatusOK, successResponse("successful", todo))
 }
 
 type listTodosRequest struct {

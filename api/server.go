@@ -7,12 +7,12 @@ import (
 
 // Server: serve http request for the todo services
 type Server struct {
-	store  *db.Store
+	store  db.Store
 	router *gin.Engine
 }
 
 // NewServer: create a new server instance and a new HTTP server and routing
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
 
