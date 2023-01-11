@@ -13,8 +13,14 @@ create_migration:
 migrateup:
 	migrate -path db/migration -database "postgres://root:secret@localhost:5432/todo?sslmode=disable" -verbose up
 
+migrateuplast:
+	migrate -path db/migration -database "postgres://root:secret@localhost:5432/todo?sslmode=disable" -verbose up 1
+
 migratedown:
 	migrate -path db/migration -database "postgres://root:secret@localhost:5432/todo?sslmode=disable" -verbose down
+
+migratedownlast:
+	migrate -path db/migration -database "postgres://root:secret@localhost:5432/todo?sslmode=disable" -verbose down 1
 
 sqlc:
 	sqlc generate
@@ -29,4 +35,4 @@ mock:
 	mockgen -package mockdb -destination db/mock/store.go  github.com/ndenisj/go_todo/db/sqlc Store
 
 
-.PHONY: postgres createdb dropdb create_migration migrateup migratedown sqlc test server mock
+.PHONY: postgres createdb dropdb create_migration migrateup migratedown sqlc test server mock migratedownlast migrateuplast

@@ -10,10 +10,16 @@ import (
 
 type Querier interface {
 	CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteTodo(ctx context.Context, id int64) error
 	GetTodo(ctx context.Context, id int64) (Todo, error)
+	GetUser(ctx context.Context, id int64) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByUsername(ctx context.Context, username string) (User, error)
 	ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, error)
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -12,22 +12,29 @@ import (
 
 const createTodo = `-- name: CreateTodo :one
 INSERT INTO todos (
+    user_id,
     owner, 
     title, 
     content
 ) VALUES (
-    $1, $2, $3
-) RETURNING id, owner, title, content, created_at
+    $1, $2, $3, $4
+) RETURNING id, owner, title, content, created_at, user_id
 `
 
 type CreateTodoParams struct {
+	UserID  int64  `json:"userID"`
 	Owner   string `json:"owner"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
 func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, createTodo, arg.Owner, arg.Title, arg.Content)
+	row := q.db.QueryRowContext(ctx, createTodo,
+		arg.UserID,
+		arg.Owner,
+		arg.Title,
+		arg.Content,
+	)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -35,6 +42,7 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 		&i.Title,
 		&i.Content,
 		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
@@ -50,7 +58,7 @@ func (q *Queries) DeleteTodo(ctx context.Context, id int64) error {
 }
 
 const getTodo = `-- name: GetTodo :one
-SELECT id, owner, title, content, created_at FROM todos
+SELECT id, owner, title, content, created_at, user_id FROM todos
 WHERE id = $1
 LIMIT 1
 `
@@ -64,12 +72,13 @@ func (q *Queries) GetTodo(ctx context.Context, id int64) (Todo, error) {
 		&i.Title,
 		&i.Content,
 		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const listTodos = `-- name: ListTodos :many
-SELECT id, owner, title, content, created_at FROM todos
+SELECT id, owner, title, content, created_at, user_id FROM todos
 ORDER BY id
 LIMIT $1
 OFFSET $2
@@ -95,6 +104,7 @@ func (q *Queries) ListTodos(ctx context.Context, arg ListTodosParams) ([]Todo, e
 			&i.Title,
 			&i.Content,
 			&i.CreatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -115,7 +125,7 @@ SET
     title = COALESCE($1, title),
     content = COALESCE($2, content)
 WHERE id = $3
-RETURNING id, owner, title, content, created_at
+RETURNING id, owner, title, content, created_at, user_id
 `
 
 type UpdateTodoParams struct {
@@ -133,6 +143,7 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		&i.Title,
 		&i.Content,
 		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }

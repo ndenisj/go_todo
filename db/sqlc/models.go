@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -14,4 +15,17 @@ type Todo struct {
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"createdAt"`
+	UserID    int64     `json:"userID"`
+}
+
+type User struct {
+	ID                int64          `json:"id"`
+	FullName          string         `json:"fullName"`
+	Phone             sql.NullString `json:"phone"`
+	Username          string         `json:"username"`
+	HashedPassword    string         `json:"hashedPassword"`
+	Email             string         `json:"email"`
+	PasswordChangedAt time.Time      `json:"passwordChangedAt"`
+	IsAdmin           bool           `json:"isAdmin"`
+	CreatedAt         time.Time      `json:"createdAt"`
 }

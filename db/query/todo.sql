@@ -1,10 +1,11 @@
 -- name: CreateTodo :one
 INSERT INTO todos (
+    user_id,
     owner, 
     title, 
     content
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 ) RETURNING *;
 
 -- name: GetTodo :one

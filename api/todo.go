@@ -2,13 +2,16 @@ package api
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	db "github.com/ndenisj/go_todo/db/sqlc"
 )
 
 type createTodoRequest struct {
+	UserID  int64  `json:"user_id" binding:"required"`
 	Owner   string `json:"owner" binding:"required"`
 	Title   string `json:"title" binding:"required"`
 	Content string `json:"content" binding:"required"`
@@ -23,6 +26,7 @@ func (server *Server) createTodo(ctx *gin.Context) {
 	}
 
 	arg := db.CreateTodoParams{
+		UserID:  req.UserID,
 		Owner:   req.Owner,
 		Title:   req.Title,
 		Content: req.Content,
@@ -30,6 +34,14 @@ func (server *Server) createTodo(ctx *gin.Context) {
 
 	todo, err := server.store.CreateTodo(ctx, arg)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			log.Println(pqErr.Code.Name())
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err.Error()))
+				return
+			}
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
 		return
 	}

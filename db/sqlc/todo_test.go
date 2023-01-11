@@ -11,7 +11,9 @@ import (
 )
 
 func createRandomTodo(t *testing.T) Todo {
+	user := createRandomUser(t)
 	arg := CreateTodoParams{
+		UserID:  user.ID,
 		Owner:   utils.RandomOwner(),
 		Title:   utils.RandomTitle(),
 		Content: utils.RandomContent(),
