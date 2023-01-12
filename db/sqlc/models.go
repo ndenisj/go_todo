@@ -7,7 +7,20 @@ package db
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+type Session struct {
+	ID           uuid.UUID `json:"id"`
+	UserID       int64     `json:"userID"`
+	RefreshToken string    `json:"refreshToken"`
+	UserAgent    string    `json:"userAgent"`
+	ClientIp     string    `json:"clientIp"`
+	IsBlocked    bool      `json:"isBlocked"`
+	ExpiredAt    time.Time `json:"expiredAt"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
 
 type Todo struct {
 	ID        int64     `json:"id"`
