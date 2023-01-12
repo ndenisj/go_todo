@@ -1,35 +1,64 @@
 package api
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	db "github.com/ndenisj/go_todo/db/sqlc"
+	"github.com/ndenisj/go_todo/token"
+	"github.com/ndenisj/go_todo/utils"
 )
 
 // Server: serve http request for the todo services
 type Server struct {
-	store  db.Store
-	router *gin.Engine
+	config     utils.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
 // NewServer: create a new server instance and a new HTTP server and routing
-func NewServer(store db.Store) *Server {
-	server := &Server{store: store}
-	router := gin.Default()
+func NewServer(config utils.Config, store db.Store) (*Server, error) {
+	// create a token maker object
+	// tokenMaker, err := token.NewJwtMaker(config.TokenSymmetricKey)
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+
+	server := &Server{
+		config:     config,
+		store:      store,
+		tokenMaker: tokenMaker,
+	}
 
 	// add route to the server
+	server.setupRouter()
+
+	return server, nil
+
+}
+
+func (server *Server) setupRouter() {
+	router := gin.Default()
+
 	v1 := router.Group("/v1")
 	{
-		// todo
-		v1.POST("/todos", server.createTodo)
-		v1.GET("/todos/:id", server.getTodo)
-		v1.GET("/todos", server.listTodos)
-		v1.DELETE("/todos/:id", server.deleteTodo)
-		v1.PUT("/todos", server.updateTodo)
 		// user
 		v1.POST("/user", server.createUser)
+		v1.POST("/user/login", server.loginUser)
+	}
+
+	v1auth := router.Group("/v1").Use(authMiddleware(server.tokenMaker))
+	{
+		// todo
+		v1auth.POST("/todos", server.createTodo)
+		v1auth.GET("/todos/:id", server.getTodo)
+		v1auth.GET("/todos", server.listTodos)
+		v1auth.DELETE("/todos/:id", server.deleteTodo)
+		v1auth.PUT("/todos", server.updateTodo)
 	}
 	// router.POST("/todos", server.createTodo)
 	// router.GET("/todos/:id", server.getTodo)
@@ -38,8 +67,6 @@ func NewServer(store db.Store) *Server {
 	// router.PUT("/todos", server.updateTodo)
 
 	server.router = router
-	return server
-
 }
 
 // Start: runs the HTTP server on a specific address

@@ -9,26 +9,33 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	mockdb "github.com/ndenisj/go_todo/db/mock"
 	db "github.com/ndenisj/go_todo/db/sqlc"
+	"github.com/ndenisj/go_todo/token"
 	"github.com/ndenisj/go_todo/utils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetTodoAPI(t *testing.T) {
-	todo := randomTodo()
+	user, _ := randomUser(t)
+	todo := randomTodo(user.ID)
 
 	testCases := []struct {
 		name          string
 		todoId        int64
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:   "OK",
 			todoId: todo.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
 				store.EXPECT().
@@ -44,6 +51,9 @@ func TestGetTodoAPI(t *testing.T) {
 		{
 			name:   "NotFound",
 			todoId: todo.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
 				store.EXPECT().
@@ -59,6 +69,9 @@ func TestGetTodoAPI(t *testing.T) {
 		{
 			name:   "InternalError",
 			todoId: todo.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
 				store.EXPECT().
@@ -74,6 +87,9 @@ func TestGetTodoAPI(t *testing.T) {
 		{
 			name:   "InvalidId",
 			todoId: 0,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// build stubs
 				store.EXPECT().
@@ -99,13 +115,14 @@ func TestGetTodoAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// start test HTTP server and send account request
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/v1/todos/%d", tc.todoId)
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)
 		})
@@ -113,9 +130,10 @@ func TestGetTodoAPI(t *testing.T) {
 	}
 }
 
-func randomTodo() db.Todo {
+func randomTodo(user_id int64) db.Todo {
 	return db.Todo{
 		ID:      utils.RandomInt(1, 1000),
+		UserID:  user_id,
 		Owner:   utils.RandomOwner(),
 		Title:   utils.RandomTitle(),
 		Content: utils.RandomContent(),

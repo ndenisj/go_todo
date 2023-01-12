@@ -2,16 +2,17 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	db "github.com/ndenisj/go_todo/db/sqlc"
+	"github.com/ndenisj/go_todo/token"
 )
 
 type createTodoRequest struct {
-	UserID  int64  `json:"user_id" binding:"required"`
 	Owner   string `json:"owner" binding:"required"`
 	Title   string `json:"title" binding:"required"`
 	Content string `json:"content" binding:"required"`
@@ -25,8 +26,9 @@ func (server *Server) createTodo(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateTodoParams{
-		UserID:  req.UserID,
+		UserID:  authPayload.UserId,
 		Owner:   req.Owner,
 		Title:   req.Title,
 		Content: req.Content,
@@ -71,6 +73,13 @@ func (server *Server) getTodo(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if todo.UserID != authPayload.UserId {
+		err := errors.New("todo does not belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err.Error()))
+		return
+	}
+
 	ctx.JSON(http.StatusOK, todo)
 	// ctx.JSON(http.StatusOK, successResponse("successful", todo))
 }
@@ -87,7 +96,9 @@ func (server *Server) listTodos(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.ListTodosParams{
+		UserID: authPayload.UserId,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
@@ -112,7 +123,24 @@ func (server *Server) deleteTodo(ctx *gin.Context) {
 		return
 	}
 
-	err := server.store.DeleteTodo(ctx, req.ID)
+	todo, err := server.store.GetTodo(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse("Todo not found"))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if todo.UserID != authPayload.UserId {
+		err := errors.New("you can not delete this todo")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err.Error()))
+		return
+	}
+
+	err = server.store.DeleteTodo(ctx, req.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
 		return

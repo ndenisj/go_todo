@@ -1,5 +1,14 @@
 package api
 
+import (
+	"database/sql"
+	"testing"
+
+	db "github.com/ndenisj/go_todo/db/sqlc"
+	"github.com/ndenisj/go_todo/utils"
+	"github.com/stretchr/testify/require"
+)
+
 // import (
 // 	"database/sql"
 // 	"net/http/httptest"
@@ -45,22 +54,22 @@ package api
 // 	}
 // }
 
-// func randomUser(t *testing.T) (user db.User, password string) {
-// 	password = utils.RandomString(7)
-// 	hashedPassword, err := utils.HashedPassword(password)
-// 	require.NoError(t, err)
+func randomUser(t *testing.T) (user db.User, password string) {
+	password = utils.RandomString(7)
+	hashedPassword, err := utils.HashedPassword(password)
+	require.NoError(t, err)
 
-// 	user = db.User{
-// 		ID:       utils.RandomInt(100, 1000),
-// 		FullName: utils.RandomFullname(),
-// 		Phone: sql.NullString{
-// 			String: utils.RandomPhone(),
-// 			Valid:  true,
-// 		},
-// 		Username:       utils.RandomUsername(),
-// 		HashedPassword: hashedPassword,
-// 		Email:          utils.RandomEmail(),
-// 	}
+	user = db.User{
+		ID:       utils.RandomInt(100, 1000),
+		FullName: utils.RandomFullname(),
+		Phone: sql.NullString{
+			String: utils.RandomPhone(),
+			Valid:  true,
+		},
+		Username:       utils.RandomUsername(),
+		HashedPassword: hashedPassword,
+		Email:          utils.RandomEmail(),
+	}
 
-// 	return
-// }
+	return
+}

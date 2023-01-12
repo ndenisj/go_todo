@@ -22,7 +22,7 @@ type createUserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 }
 
-type createUserResponse struct {
+type userResponse struct {
 	ID                int64     `json:"id"`
 	FullName          string    `json:"fullName"`
 	Phone             string    `json:"phone"`
@@ -31,6 +31,19 @@ type createUserResponse struct {
 	PasswordChangedAt time.Time `json:"passwordChangedAt"`
 	IsAdmin           bool      `json:"isAdmin"`
 	CreatedAt         time.Time `json:"createdAt"`
+}
+
+func newUserResponse(user db.User) userResponse {
+	return userResponse{
+		ID:                user.ID,
+		FullName:          user.FullName,
+		Phone:             user.Phone.String,
+		Username:          user.Username,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		IsAdmin:           user.IsAdmin,
+		CreatedAt:         user.CreatedAt,
+	}
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
@@ -89,16 +102,57 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
-	response := createUserResponse{
-		ID:                user.ID,
-		FullName:          user.FullName,
-		Phone:             user.Phone.String,
-		Username:          user.Username,
-		Email:             user.Email,
-		PasswordChangedAt: user.PasswordChangedAt,
-		IsAdmin:           user.IsAdmin,
-		CreatedAt:         user.CreatedAt,
-	}
+	response := newUserResponse(user)
 
 	ctx.JSON(http.StatusCreated, successResponse("User created successfully!", response))
+}
+
+type loginUserRequest struct {
+	Password string `json:"password" binding:"required,min=6"`
+	Email    string `json:"email" binding:"required,email"`
+}
+
+type loginUserResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
+}
+
+func (server *Server) loginUser(ctx *gin.Context) {
+	var req loginUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
+		return
+	}
+
+	user, err := server.store.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err.Error()))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
+		return
+	}
+
+	err = utils.CheckPassword(req.Password, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err.Error()))
+		return
+	}
+
+	accessToken, _, err := server.tokenMaker.CreateToken(
+		user.ID,
+		server.config.AccessTokenDuration,
+	)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err.Error()))
+		return
+	}
+
+	response := loginUserResponse{
+		AccessToken: accessToken,
+		User:        newUserResponse(user),
+	}
+
+	ctx.JSON(http.StatusCreated, successResponse("Login successful!", response))
 }

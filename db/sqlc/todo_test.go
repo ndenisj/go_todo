@@ -54,22 +54,25 @@ func TestGetTodo(t *testing.T) {
 }
 
 func TestListTodo(t *testing.T) {
+	var lastTodo Todo
 	for i := 0; i <= 10; i++ {
-
-		createRandomTodo(t)
+		lastTodo = createRandomTodo(t)
 	}
 
 	arg := ListTodosParams{
+		UserID: lastTodo.UserID,
 		Limit:  5,
-		Offset: 5,
+		Offset: 0,
 	}
 
 	todos, err := testQueries.ListTodos(context.Background(), arg)
 	require.NoError(t, err)
-	require.Len(t, todos, 5)
+	require.NotEmpty(t, todos)
+	// require.Len(t, todos, 5)
 
 	for _, todo := range todos {
 		require.NotEmpty(t, todo)
+		require.Equal(t, lastTodo.UserID, todo.UserID)
 	}
 }
 
